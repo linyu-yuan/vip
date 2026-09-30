@@ -6,11 +6,18 @@
 const 配置 = {
   // 这里已经换成了你自己的 CF Worker 域名
   网关: "https://vip.helloyuan.eu.org/v1/playviewunite",
-  策略: "节点选择", // 已改为你 Surge 里真实的策略组名称
+  策略: "你的Surge策略组名称", // 【换成你自己的策略组，比如 PROXY】
   超时: 15000
 };
 
-// 透传头
+// 原 B站 白名单接口
+// 【修改这里】换成你自己项目的接口路径
+const 白名单 = new Set([
+  "grpc.biliapi.net/bilibili.app.playerunite.v1.Player/PlayViewUnite",
+  "app.bilibili.com/bilibili.app.playerunite.v1.Player/PlayViewUnite"
+]);
+
+// 原 B站 透传头
 const 设备头名称 = "x-bili-device-bin"; 
 const UID头名称 = "x-bili-uid"; 
 
@@ -57,15 +64,11 @@ async function main() {
     const deviceHeader = req.headers[设备头名称] || "";
     const uid = req.headers[UID头名称] || "123456";
 
-    // 【核心改动】动态获取请求的真实路径，不管是什么接口，直接原样发给 Worker！
-    // 原来写死的 target 会导致接口不匹配，现在改成动态获取。
-    const realTarget = req.url.replace(/^https?:\/\//, "");
-
     // 把请求打包发给 CF Worker，由 Worker 去判断白名单
     const payload = {
       version: 1,
       uid: uid,
-      target: realTarget, // 动态路径
+      target: "grpc.biliapi.net/bilibili.app.playerunite.v1.Player/PlayViewUnite", // 【换成你自己的目标】
       body: 字节转Base64(bodyBytes),
       bodyEncoding: "base64"
     };
