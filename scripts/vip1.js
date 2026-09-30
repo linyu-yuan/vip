@@ -10,16 +10,7 @@ const 配置 = {
   超时: 15000
 };
 
-// 原 B站 白名单接口（已放宽拦截范围，兼容多种播放请求）
-const 白名单 = new Set([
-  "grpc.biliapi.net/bilibili.app.playerunite.v1.Player/PlayViewUnite",
-  "grpc.biliapi.net/bilibili.app.playurl.v1.PlayURL/PlayView",
-  "grpc.biliapi.net/bilibili.pgc.gateway.player.v2.PlayURL/PlayView",
-  "app.bilibili.com/bilibili.app.playerunite.v1.Player/PlayViewUnite",
-  "app.bilibili.com/bilibili.app.playurl.v1.PlayURL/PlayView"
-]);
-
-// 原 B站 透传头
+// 透传头
 const 设备头名称 = "x-bili-device-bin"; 
 const UID头名称 = "x-bili-uid"; 
 
@@ -66,11 +57,15 @@ async function main() {
     const deviceHeader = req.headers[设备头名称] || "";
     const uid = req.headers[UID头名称] || "123456";
 
+    // 【核心改动】动态获取请求的真实路径，不管是什么接口，直接原样发给 Worker！
+    // 原来写死的 target 会导致接口不匹配，现在改成动态获取。
+    const realTarget = req.url.replace(/^https?:\/\//, "");
+
     // 把请求打包发给 CF Worker，由 Worker 去判断白名单
     const payload = {
       version: 1,
       uid: uid,
-      target: "grpc.biliapi.net/bilibili.app.playerunite.v1.Player/PlayViewUnite",
+      target: realTarget, // 动态路径
       body: 字节转Base64(bodyBytes),
       bodyEncoding: "base64"
     };
