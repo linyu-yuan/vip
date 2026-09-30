@@ -6,15 +6,17 @@
 const 配置 = {
   // 这里已经换成了你自己的 CF Worker 域名
   网关: "https://vip.helloyuan.eu.org/v1/playviewunite",
-  策略: "节点选择", // 【换成你自己的策略组，比如 PROXY】
+  策略: "节点选择", // 已改为你 Surge 里真实的策略组名称
   超时: 15000
 };
 
-// 原 B站 白名单接口
-// 【修改这里】换成你自己项目的接口路径
+// 原 B站 白名单接口（已放宽拦截范围，兼容多种播放请求）
 const 白名单 = new Set([
   "grpc.biliapi.net/bilibili.app.playerunite.v1.Player/PlayViewUnite",
-  "app.bilibili.com/bilibili.app.playerunite.v1.Player/PlayViewUnite"
+  "grpc.biliapi.net/bilibili.app.playurl.v1.PlayURL/PlayView",
+  "grpc.biliapi.net/bilibili.pgc.gateway.player.v2.PlayURL/PlayView",
+  "app.bilibili.com/bilibili.app.playerunite.v1.Player/PlayViewUnite",
+  "app.bilibili.com/bilibili.app.playurl.v1.PlayURL/PlayView"
 ]);
 
 // 原 B站 透传头
@@ -68,7 +70,7 @@ async function main() {
     const payload = {
       version: 1,
       uid: uid,
-      target: "grpc.biliapi.net/bilibili.app.playerunite.v1.Player/PlayViewUnite", // 【换成你自己的目标】
+      target: "grpc.biliapi.net/bilibili.app.playerunite.v1.Player/PlayViewUnite",
       body: 字节转Base64(bodyBytes),
       bodyEncoding: "base64"
     };
