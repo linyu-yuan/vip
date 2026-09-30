@@ -6,7 +6,7 @@
 const 配置 = {
   // 这里已经换成了你自己的 CF Worker 域名
   网关: "https://vip.helloyuan.eu.org/v1/playviewunite",
-  策略: "你的Surge策略组名称", // 【换成你自己的策略组，比如 PROXY】
+  策略: "节点选择", // 【换成你自己的策略组，比如 PROXY】
   超时: 15000
 };
 
