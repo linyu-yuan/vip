@@ -1,14 +1,20 @@
 // ============================================================
 // 原 B站 请求脚本 vip1.js
-// 作用：拦截请求，把 gRPC 二进制数据发给 CF Worker
+// 基于原作者逻辑：严格白名单，只拦截播放接口
 // ============================================================
 
 const 配置 = {
   // 这里已经换成了你自己的 CF Worker 域名
   网关: "https://vip.helloyuan.eu.org/v1/playviewunite",
-  策略: "DMIT", // 确保这里与你的 Surge 策略组名字一致
+  策略: "DMIT", // 【务必换成你自己 Surge 里真实的策略组名字】
   超时: 15000
 };
+
+// 原作者的严格白名单：只有这两个接口才允许被转发
+const 白名单 = new Set([
+  "grpc.biliapi.net/bilibili.app.playerunite.v1.Player/PlayViewUnite",
+  "app.bilibili.com/bilibili.app.playerunite.v1.Player/PlayViewUnite"
+]);
 
 // 原 B站 透传头
 const 设备头名称 = "x-bili-device-bin"; 
@@ -58,11 +64,19 @@ async function main() {
     const deviceHeader = req.headers[设备头名称] || "";
     const uid = req.headers[UID头名称] || "123456";
 
-    // 把请求打包发给 CF Worker
+    // 获取并校验请求路径
+    const realTarget = req.url.replace(/^https?:\/\//, "");
+
+    // 【关键】不在白名单里，直接放行，一个字都不发给 Worker（完美规避风控）
+    if (!白名单.has(realTarget)) {
+      return $done({});
+    }
+
+    // 把请求打包发给 CF Worker，由 Worker 去判断白名单
     const payload = {
       version: 1,
       uid: uid,
-      target: req.url.replace(/^https?:\/\//, ""), // 动态获取目标，防止接口路径写死出错
+      target: realTarget, // 使用严格校验通过的路径
       body: 字节转Base64(bodyBytes),
       bodyEncoding: "base64"
     };
