@@ -5,7 +5,7 @@
 
 const 配置 = {
   网关: "https://vip.helloyuan.eu.org/v1/playviewunite",
-  策略: "DMIT",          // 需要让网关请求走某个代理时，填 Surge 里真实的策略组名；留空则不指定
+  策略: "Proxy",          // 需要让网关请求走某个代理时，填 Surge 里真实的策略组名；留空则不指定
   密钥: "",          // 可选：Worker 设置了 GATEWAY_KEY 就填同样的值
   响应字段: "body",  // 原作者用的是 body（Uint8Array）；若仍不能播放可改成 "bodyBytes" 试试
   补grpcStatus: false // 上游没带 grpc-status 时补 "0"，默认关闭，需要时再开
