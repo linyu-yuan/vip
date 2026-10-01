@@ -6,16 +6,9 @@
 const 配置 = {
   // 这里已经换成了你自己的 CF Worker 域名
   网关: "https://vip.helloyuan.eu.org/v1/playviewunite",
-  策略: "DMIT", // 【换成你自己的策略组，比如 PROXY】
+  策略: "DMIT", // 确保这里与你的 Surge 策略组名字一致
   超时: 15000
 };
-
-// 原 B站 白名单接口
-// 【修改这里】换成你自己项目的接口路径
-const 白名单 = new Set([
-  "grpc.biliapi.net/bilibili.app.playerunite.v1.Player/PlayViewUnite",
-  "app.bilibili.com/bilibili.app.playerunite.v1.Player/PlayViewUnite"
-]);
 
 // 原 B站 透传头
 const 设备头名称 = "x-bili-device-bin"; 
@@ -36,7 +29,8 @@ function 字节转Base64(bytes) {
 // Base64 转字节
 function Base64转字节(input) {
   const CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
-  let s = String(input || '').replace(/\s+/g, '').replace(/-/g, '+').replace(/_/g, '/').replace(/=+$/, '').padEnd(Math.ceil(s.length / 4) * 4, '=');
+  let s = String(input || '').replace(/\s+/g, '').replace(/-/g, '+').replace(/_/g, '/').replace(/=+$/, '');
+  s = s.padEnd(Math.ceil(s.length / 4) * 4, '=');
   const out = [];
   for (let i = 0; i < s.length; i += 4) {
     const c0 = CHARS.indexOf(s[i]), c1 = CHARS.indexOf(s[i + 1]);
@@ -64,11 +58,11 @@ async function main() {
     const deviceHeader = req.headers[设备头名称] || "";
     const uid = req.headers[UID头名称] || "123456";
 
-    // 把请求打包发给 CF Worker，由 Worker 去判断白名单
+    // 把请求打包发给 CF Worker
     const payload = {
       version: 1,
       uid: uid,
-      target: "grpc.biliapi.net/bilibili.app.playerunite.v1.Player/PlayViewUnite", // 【换成你自己的目标】
+      target: req.url.replace(/^https?:\/\//, ""), // 动态获取目标，防止接口路径写死出错
       body: 字节转Base64(bodyBytes),
       bodyEncoding: "base64"
     };
