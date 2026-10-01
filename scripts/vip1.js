@@ -1,26 +1,22 @@
 // ============================================================
 // 原 B站 请求脚本 vip1.js
-// 基于原作者逻辑：严格白名单，只拦截播放接口
 // ============================================================
 
 const 配置 = {
-  // 这里已经换成了你自己的 CF Worker 域名
   网关: "https://vip.helloyuan.eu.org/v1/playviewunite",
-  策略: "DMIT", // 【务必换成你自己 Surge 里真实的策略组名字】
+  策略: "DMIT", // 【务必改成你 Surge 里真实的策略组名字】
   超时: 15000
 };
 
-// 原作者的严格白名单：只有这两个接口才允许被转发
+// 白名单接口（只拦截播放相关的，防止风控）
 const 白名单 = new Set([
   "grpc.biliapi.net/bilibili.app.playerunite.v1.Player/PlayViewUnite",
   "app.bilibili.com/bilibili.app.playerunite.v1.Player/PlayViewUnite"
 ]);
 
-// 原 B站 透传头
 const 设备头名称 = "x-bili-device-bin"; 
 const UID头名称 = "x-bili-uid"; 
 
-// 字节转 Base64
 function 字节转Base64(bytes) {
   const CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
   let out = '';
@@ -32,7 +28,6 @@ function 字节转Base64(bytes) {
   return out;
 }
 
-// Base64 转字节
 function Base64转字节(input) {
   const CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
   let s = String(input || '').replace(/\s+/g, '').replace(/-/g, '+').replace(/_/g, '/').replace(/=+$/, '');
@@ -49,7 +44,6 @@ function Base64转字节(input) {
   return new Uint8Array(out);
 }
 
-// 主逻辑
 async function main() {
   try {
     const req = $request;
@@ -60,28 +54,22 @@ async function main() {
       bodyBytes = buf;
     }
 
-    // 取原 B站 的头
     const deviceHeader = req.headers[设备头名称] || "";
     const uid = req.headers[UID头名称] || "123456";
 
-    // 获取并校验请求路径
     const realTarget = req.url.replace(/^https?:\/\//, "");
-
-    // 【关键】不在白名单里，直接放行，一个字都不发给 Worker（完美规避风控）
     if (!白名单.has(realTarget)) {
       return $done({});
     }
 
-    // 把请求打包发给 CF Worker，由 Worker 去判断白名单
     const payload = {
       version: 1,
       uid: uid,
-      target: realTarget, // 使用严格校验通过的路径
+      target: realTarget,
       body: 字节转Base64(bodyBytes),
       bodyEncoding: "base64"
     };
 
-    // 发送给 Worker（走你绑定的自定义域名）
     const resp = await new Promise((resolve, reject) => {
       $httpClient.post({
         url: 配置.网关,
@@ -98,10 +86,19 @@ async function main() {
     if (!result.ok) throw new Error(result.message || "Worker 返回错误");
 
     const finalBytes = Base64转字节(result.body.body);
+
+    // 【修复】强制补上 gRPC 响应头，App 才能正确解析
+    const finalHeaders = { "Content-Type": "application/grpc" };
+    if (result.body.headers) {
+      for (let k in result.body.headers) {
+        finalHeaders[k] = result.body.headers[k];
+      }
+    }
+
     $done({
       response: {
         status: result.body.status || 200,
-        headers: result.body.headers || {},
+        headers: finalHeaders,
         bodyBytes: finalBytes
       }
     });
