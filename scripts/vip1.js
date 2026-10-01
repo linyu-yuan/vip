@@ -1,5 +1,5 @@
 // ============================================================
-// B站 请求脚本 vip1.js（对照原作者脚本修订版）
+// B站 请求脚本 vip1.js
 // 作用：拦截播放接口，把 gRPC 请求体转给 CF Worker，再把结果当作响应返回给 App
 // ============================================================
 
@@ -102,7 +102,10 @@ async function main() {
       uid: mid,
       target: realTarget,
       body: 字节转Base64(bodyBytes),
-      bodyEncoding: "base64"
+      bodyEncoding: "base64",
+      // gRPC 压缩编码：App 压缩了请求体，就必须把编码头一起告诉 Worker
+      grpcEncoding: 取头(req.headers, "grpc-encoding").trim(),
+      grpcAcceptEncoding: 取头(req.headers, "grpc-accept-encoding").trim()
     };
     const headers = { "Content-Type": "application/json; charset=utf-8", "x-bili-device-bin": deviceHeader };
     if (配置.密钥) headers["x-gateway-key"] = 配置.密钥;
@@ -151,7 +154,7 @@ async function main() {
     if (!取头(finalHeaders, "content-type")) finalHeaders["content-type"] = "application/grpc";
     if (配置.补grpcStatus && !取头(finalHeaders, "grpc-status")) finalHeaders["grpc-status"] = "0";
 
-    console.log("[vip1] mid=" + mid + " target=" + realTarget + " http=" + (up.status || 200) + " grpc-status=" + (gs || "无") + " len=" + finalBytes.length);
+    console.log("[vip1] grpc-encoding=" + (payload.grpcEncoding || "无") + " mid=" + mid + " target=" + realTarget + " http=" + (up.status || 200) + " grpc-status=" + (gs || "无") + " len=" + finalBytes.length);
 
     const response = { status: Number(up.status) || 200, headers: finalHeaders };
     response[配置.响应字段 === "bodyBytes" ? "bodyBytes" : "body"] = finalBytes;
